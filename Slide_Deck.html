@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDE AI Agent – Revolusi Proses Development</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        ::selection {
+            background: #ea580c;
+            color: #fff;
+        }
+
+        body {
+            background: #0c0a09;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size: 128px;
+        }
+
+        .dot-grid {
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.55s, transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(30px) scale(0.98);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .slide.exit-up {
+            opacity: 0;
+            transform: translateY(-30px) scale(0.98);
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+        }
+
+        .orb-orange {
+            background: rgba(234, 88, 12, 0.15);
+        }
+
+        .orb-blue {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .orb-purple {
+            background: rgba(168, 85, 247, 0.1);
+        }
+
+        .orb-green {
+            background: rgba(34, 197, 94, 0.08);
+        }
+
+        .orb-red {
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .geo-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            pointer-events: none;
+        }
+
+        .geo-cross {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .geo-cross::before,
+        .geo-cross::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .geo-cross::before {
+            width: 1px;
+            height: 20px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .geo-cross::after {
+            height: 1px;
+            width: 20px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(28px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.92);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes pulseGlow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 0 14px rgba(234, 88, 12, 0);
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-12px);
+            }
+        }
+
+        @keyframes floatSlow {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-8px) rotate(2deg);
+            }
+        }
+
+        @keyframes dash-flow {
+            0% {
+                stroke-dashoffset: 100;
+            }
+
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        @keyframes count-pop {
+            0% {
+                transform: scale(0.6);
+                opacity: 0;
+            }
+
+            60% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes border-glow {
+
+            0%,
+            100% {
+                border-color: rgba(234, 88, 12, 0.2);
+            }
+
+            50% {
+                border-color: rgba(234, 88, 12, 0.5);
+            }
+        }
+
+        @keyframes photo-shine {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .slide.active .a1 {
+            animation: fadeInUp 0.6s ease-out 0.1s both;
+        }
+
+        .slide.active .a2 {
+            animation: fadeInUp 0.6s ease-out 0.22s both;
+        }
+
+        .slide.active .a3 {
+            animation: fadeInUp 0.6s ease-out 0.34s both;
+        }
+
+        .slide.active .a4 {
+            animation: fadeInUp 0.6s ease-out 0.46s both;
+        }
+
+        .slide.active .a5 {
+            animation: fadeInUp 0.6s ease-out 0.58s both;
+        }
+
+        .slide.active .a6 {
+            animation: fadeInUp 0.6s ease-out 0.70s both;
+        }
+
+        .slide.active .asc {
+            animation: fadeInScale 0.7s ease-out 0.2s both;
+        }
+
+        .slide.active .apop {
+            animation: count-pop 0.5s ease-out 0.3s both;
+        }
+
+        .flow-dash {
+            stroke-dasharray: 8 6;
+            animation: dash-flow 1.2s linear infinite;
+        }
+
+        .card {
+            background: rgba(28, 25, 23, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .card-glow:hover {
+            border-color: rgba(234, 88, 12, 0.3);
+            box-shadow: 0 0 30px rgba(234, 88, 12, 0.08), 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .trow {
+            transition: background 0.15s ease;
+        }
+
+        .trow:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .code-bg {
+            background: rgba(12, 10, 9, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: #a8a29e;
+            font-family: 'Courier New', monospace;
+            font-size: 0.72rem;
+            line-height: 1.7;
+        }
+
+        .prompt-box {
+            position: relative;
+            overflow: hidden;
+            background: rgba(28, 25, 23, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(234, 88, 12, 0.15);
+            border-radius: 12px;
+        }
+
+        .prompt-box::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, #ea580c, #f97316);
+            border-radius: 2px;
+        }
+
+        .ndot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .ndot.active {
+            background: #ea580c;
+            width: 22px;
+            border-radius: 9999px;
+            box-shadow: 0 0 8px rgba(234, 88, 12, 0.4);
+        }
+
+        .ndot:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .shimmer-text {
+            background: linear-gradient(90deg, #ea580c 0%, #fb923c 40%, #ea580c 80%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3s ease infinite;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        /* Photo frame */
+        .photo-frame {
+            position: relative;
+            display: inline-block;
+        }
+
+        .photo-frame::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 30%, #ea580c 60%, #c2410c 100%);
+            background-size: 200% 200%;
+            animation: photo-shine 4s ease infinite;
+            z-index: -1;
+        }
+
+        .photo-frame::after {
+            content: '';
+            position: absolute;
+            inset: -20px;
+            border-radius: 28px;
+            background: radial-gradient(ellipse at center, rgba(234, 88, 12, 0.15) 0%, transparent 70%);
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .photo-frame img {
+            display: block;
+            border-radius: 17px;
+            object-fit: cover;
+            object-position: center top;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        @media print {
+            .slide {
+                position: relative !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                transform: none !important;
+                page-break-after: always;
+                min-height: 100vh;
+                background: #1c1917 !important;
+            }
+
+            .nav-ui {
+                display: none !important;
+            }
+
+            body::before {
+                display: none;
+            }
+        }
+
+        .tip {
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+
+        .htip:hover .tip {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="text-stone-200">
+
+    <!-- Progress Bar -->
+    <div class="nav-ui fixed top-0 left-0 right-0 z-50 h-[3px] bg-white/5">
+        <div id="prog"
+            class="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-400 ease-out"
+            style="width:11.11%"></div>
+    </div>
+
+    <!-- Slide Counter -->
+    <div class="nav-ui fixed top-5 right-7 z-50 flex items-center gap-3">
+        <div class="text-[11px] font-medium text-stone-500 tracking-widest font-mono">
+            <span id="curNum" class="text-orange-500">01</span><span class="text-stone-600"> / 09</span>
+        </div>
+    </div>
+
+    <!-- Brand -->
+    <div class="nav-ui fixed top-4 left-7 z-50 flex items-center gap-2.5">
+        <div
+            class="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-700 rounded-lg flex items-center justify-center shadow-lg shadow-orange-600/20">
+            <i data-lucide="cpu" class="w-4 h-4 text-white"></i>
+        </div>
+        <span class="text-[11px] font-semibold text-stone-500 tracking-widest uppercase">IDE AI Agent</span>
+    </div>
+
+    <!-- Nav Dots -->
+    <div class="nav-ui fixed right-7 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2.5">
+        <button onclick="goTo(0)" class="ndot active" data-i="0"></button>
+        <button onclick="goTo(1)" class="ndot" data-i="1"></button>
+        <button onclick="goTo(2)" class="ndot" data-i="2"></button>
+        <button onclick="goTo(3)" class="ndot" data-i="3"></button>
+        <button onclick="goTo(4)" class="ndot" data-i="4"></button>
+        <button onclick="goTo(5)" class="ndot" data-i="5"></button>
+        <button onclick="goTo(6)" class="ndot" data-i="6"></button>
+        <button onclick="goTo(7)" class="ndot" data-i="7"></button>
+        <button onclick="goTo(8)" class="ndot" data-i="8"></button>
+    </div>
+
+    <!-- ═══════════════ SLIDES ═══════════════ -->
+    <div id="sc" class="relative w-full h-full">
+
+        <!-- ══ SLIDE 1: TITLE ══ -->
+        <div class="slide active dot-grid" data-i="0">
+            <div class="orb orb-orange w-[500px] h-[500px] -top-40 -right-40" style="position:absolute"></div>
+            <div class="orb orb-purple w-[400px] h-[400px] -bottom-32 -left-32" style="position:absolute"></div>
+            <div class="geo-ring w-[600px] h-[600px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                style="position:absolute"></div>
+            <div class="geo-ring w-[400px] h-[400px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                style="position:absolute; border-color:rgba(234,88,12,0.06)"></div>
+            <div class="geo-cross" style="position:absolute; top:15%; left:12%"></div>
+            <div class="geo-cross" style="position:absolute; top:75%; right:15%"></div>
+            <div class="geo-cross" style="position:absolute; top:25%; right:22%"></div>
+            <div style="position:absolute; top:18%; left:18%; animation: float 4s ease-in-out infinite;" class="a3">
+                <div
+                    class="w-10 h-10 rounded-xl border border-orange-600/20 bg-orange-600/5 flex items-center justify-center">
+                    <i data-lucide="terminal" class="w-4 h-4 text-orange-600/50"></i>
+                </div>
+            </div>
+            <div style="position:absolute; bottom:22%; right:16%; animation: float 5s ease-in-out infinite 1s;"
+                class="a4">
+                <div
+                    class="w-10 h-10 rounded-xl border border-blue-500/20 bg-blue-500/5 flex items-center justify-center">
+                    <i data-lucide="layout" class="w-4 h-4 text-blue-500/50"></i>
+                </div>
+            </div>
+            <div style="position:absolute; top:30%; right:12%; animation: float 3.5s ease-in-out infinite 0.5s;"
+                class="a5">
+                <div
+                    class="w-8 h-8 rounded-lg border border-purple-500/20 bg-purple-500/5 flex items-center justify-center">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5 text-purple-500/50"></i>
+                </div>
+            </div>
+
+            <div class="relative z-10 max-w-5xl mx-auto px-8 text-center">
+                <h1 class="a2 text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight leading-[1.05] mb-6">
+                    <span class="text-stone-100">IDE</span> <span class="shimmer-text">AI Agent</span>
+                </h1>
+                <p class="a3 text-lg md:text-xl text-stone-400 max-w-2xl mx-auto leading-relaxed mb-12">
+                    Menggeser Peran Developer dari Penulis Kode<br>menjadi <span
+                        class="text-stone-200 font-medium">Arsitek Solusi</span>
+                </p>
+                <div
+                    class="a4 w-16 h-px bg-gradient-to-r from-transparent via-orange-600/50 to-transparent mx-auto mb-10">
+                </div>
+                <div class="a5 flex items-center justify-center gap-1 text-stone-600 animate-bounce">
+                    <i data-lucide="chevrons-down" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 2: FAKTA ANTHROPIC ══ -->
+        <div class="slide dot-grid" data-i="1">
+            <div class="orb orb-orange w-[350px] h-[350px] top-10 right-10" style="position:absolute"></div>
+            <div class="orb orb-red w-[250px] h-[250px] bottom-10 left-20" style="position:absolute"></div>
+            <div class="geo-ring w-[300px] h-[300px] -top-20 -left-20" style="position:absolute"></div>
+            <div class="geo-cross" style="position:absolute; bottom:20%; left:8%"></div>
+            <div class="geo-cross" style="position:absolute; top:15%; right:25%"></div>
+
+            <div class="relative z-10 max-w-5xl mx-auto px-8 w-full">
+                <div class="a1 flex items-center gap-3 mb-3">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-600/20 flex items-center justify-center">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4 text-orange-400"></i>
+                    </div>
+                    <span class="text-[11px] font-semibold text-stone-500 tracking-widest uppercase">Data & Fakta</span>
+                </div>
+                <h2 class="a2 text-3xl md:text-4xl font-bold tracking-tight mb-3">
+                    Apa Kata <span class="text-orange-500">Anthropic</span>?
+                </h2>
+                <p class="a3 text-stone-500 text-sm mb-10">Laporan riset terbaru tentang dampak AI pada industri
+                    pengembangan software</p>
+
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div class="a3 card card-glow p-8">
+                        <div class="flex items-start justify-between mb-6">
+                            <div
+                                class="w-14 h-14 rounded-2xl bg-orange-600/10 border border-orange-600/20 flex items-center justify-center">
+                                <i data-lucide="zap" class="w-7 h-7 text-orange-500"></i>
+                            </div>
+                            <span class="badge border-white/10 bg-white/5 text-stone-400 text-[10px]">Q4 2024</span>
+                        </div>
+                        <div class="apop text-6xl font-extrabold mb-2">
+                            <span class="shimmer-text">70</span><span class="text-orange-500/60 text-4xl">%</span>
+                        </div>
+                        <p class="text-stone-400 text-sm leading-relaxed">Tugas entry level developer — bug fixing,
+                            boilerplate, unit testing — telah terbantu atau digantikan AI</p>
+                        <div class="mt-5 flex items-end gap-1.5 h-8">
+                            <div class="w-full bg-orange-600/20 rounded-sm" style="height:30%"></div>
+                            <div class="w-full bg-orange-600/30 rounded-sm" style="height:45%"></div>
+                            <div class="w-full bg-orange-600/40 rounded-sm" style="height:55%"></div>
+                            <div class="w-full bg-orange-600/50 rounded-sm" style="height:70%"></div>
+                            <div class="w-full bg-orange-600/60 rounded-sm" style="height:80%"></div>
+                            <div class="w-full bg-orange-600/80 rounded-sm" style="height:90%"></div>
+                            <div class="w-full bg-orange-600 rounded-sm" style="height:100%"></div>
+                        </div>
+                    </div>
+                    <div class="a4 card p-8" style="border-color:rgba(239,68,68,0.1)">
+                        <div class="flex items-start justify-between mb-6">
+                            <div
+                                class="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                                <i data-lucide="trending-down" class="w-7 h-7 text-red-400"></i>
+                            </div>
+                            <span class="badge border-white/10 bg-white/5 text-stone-400 text-[10px]">Startup</span>
+                        </div>
+                        <div class="apop text-6xl font-extrabold mb-2">
+                            <span class="text-red-400">-30</span><span class="text-red-400/60 text-4xl">%</span>
+                        </div>
+                        <p class="text-stone-400 text-sm leading-relaxed">Permintaan junior developer turun di startup
+                            yang sudah mengadopsi AI Agent secara aktif</p>
+                        <svg class="mt-5 w-full h-8" viewBox="0 0 200 30" fill="none">
+                            <path d="M0 25 L30 22 L60 20 L90 18 L120 15 L150 10 L180 6 L200 3"
+                                stroke="rgba(239,68,68,0.4)" stroke-width="2" fill="none" />
+                            <path d="M0 25 L30 22 L60 20 L90 18 L120 15 L150 10 L180 6 L200 3" stroke="url(#redGrad)"
+                                stroke-width="2" fill="none" stroke-dasharray="4 3" class="flow-dash" />
+                            <defs>
+                                <linearGradient id="redGrad" x1="0" y1="0" x2="200" y2="0">
+                                    <stop offset="0%" stop-color="rgba(239,68,68,0.2)" />
+                                    <stop offset="100%" stop-color="rgba(239,68,68,0.8)" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+                <div
+                    class="a5 flex items-center gap-4 px-6 py-4 rounded-xl bg-gradient-to-r from-orange-600/10 to-transparent border border-orange-600/15">
+                    <div class="w-10 h-10 rounded-xl bg-orange-600/20 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="quote" class="w-5 h-5 text-orange-500"></i>
+                    </div>
+                    <p class="text-stone-300 text-sm italic leading-relaxed">"AI bukan ancaman bagi developer yang mau
+                        beradaptasi — tapi eliminasi bagi yang menolak."</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 3: PERKENALAN DIRI (with photo) ══ -->
+        <div class="slide dot-grid" data-i="2">
+            <div class="orb orb-purple w-[400px] h-[400px] -top-20 right-20" style="position:absolute"></div>
+            <div class="orb orb-blue w-[300px] h-[300px] bottom-10 -left-10" style="position:absolute"></div>
+            <div class="orb orb-orange w-[200px] h-[200px] top-1/2 left-1/3" style="position:absolute"></div>
+            <div class="geo-ring w-[250px] h-[250px] bottom-10 right-10"
+                style="position:absolute; border-color:rgba(168,85,247,0.05)"></div>
+            <div class="geo-cross" style="position:absolute; top:20%; left:6%"></div>
+
+            <div class="relative z-10 max-w-5xl mx-auto px-8 w-full">
+                <div class="a1 flex items-center gap-3 mb-5">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20 flex items-center justify-center">
+                        <i data-lucide="user-circle" class="w-4 h-4 text-purple-400"></i>
+                    </div>
+                    <span class="text-[11px] font-semibold text-stone-500 tracking-widest uppercase">Tentang Saya</span>
+                </div>
+                <div class="grid md:grid-cols-5 gap-8">
+                    <div class="md:col-span-2">
+                        <!-- Photo -->
+                        <div class="a2 mb-5">
+                            <div class="photo-frame" style="animation: floatSlow 6s ease-in-out infinite;">
+                                <img src="https://z-cdn-media.chatglm.cn/files/7cecc2b8-a3f2-410e-951e-62e0f70adb25.png?auth_key=1877978960-c9857f465334430bb84acda1d57614f9-0-9cf2e63bde2480abb37bd02c55372687"
+                                    alt="M. Alpiannor Najimi"
+                                    class="w-full aspect-[3/4] md:aspect-auto md:h-52 object-cover object-top" />
+                            </div>
+                        </div>
+                        <!-- Name & badge -->
+                        <div class="a3 mb-5">
+                            <h2 class="text-xl font-bold text-stone-100">M. Alpiannor Najimi</h2>
+                            <div class="badge border-orange-600/20 bg-orange-600/10 text-orange-400 text-[10px] mt-1.5">
+                                <i data-lucide="sparkles" class="w-3 h-3"></i> AI-Augmented Dev Architect
+                            </div>
+                        </div>
+                        <!-- Tools -->
+                        <div class="a3 text-[10px] font-semibold text-stone-500 tracking-widest uppercase mb-2.5">Tools
+                            Dikuasai</div>
+                        <div class="a3 flex flex-wrap gap-1.5 mb-5">
+                            <span class="badge border-white/10 bg-white/5 text-stone-300 text-[10px]">Prompt
+                                Engineering</span>
+                            <span
+                                class="badge border-orange-600/20 bg-orange-600/10 text-orange-400 text-[10px]">v0.dev</span>
+                            <span
+                                class="badge border-blue-500/20 bg-blue-500/10 text-blue-400 text-[10px]">Cursor</span>
+                            <span
+                                class="badge border-green-500/20 bg-green-500/10 text-green-400 text-[10px]">Continue.dev</span>
+                        </div>
+                        <!-- Quote -->
+                        <div class="a4 p-4 rounded-xl bg-gradient-to-br from-orange-600/15 to-orange-600/5 border border-orange-600/20"
+                            style="animation:border-glow 3s ease infinite">
+                            <p class="text-orange-300 font-medium text-sm italic">"Saya tidak digantikan AI – saya naik
+                                level."</p>
+                        </div>
+                    </div>
+                    <div class="md:col-span-3">
+                        <div class="a3 text-[10px] font-semibold text-stone-500 tracking-widest uppercase mb-3">
+                            Transformasi Peran</div>
+                        <div class="card overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-white/5">
+                                        <th
+                                            class="text-left px-5 py-3.5 text-[10px] font-semibold text-stone-500 tracking-wider uppercase">
+                                            Programmer Biasa</th>
+                                        <th
+                                            class="text-left px-5 py-3.5 text-[10px] font-semibold text-orange-500 tracking-wider uppercase">
+                                            <span class="flex items-center gap-1.5"><i data-lucide="arrow-right"
+                                                    class="w-3 h-3"></i> Arsitek AI</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="trow border-b border-white/5">
+                                        <td class="px-5 py-4 text-stone-500 flex items-center gap-2"><i data-lucide="x"
+                                                class="w-3.5 h-3.5 text-red-500/50"></i>Menulis kode dari nol</td>
+                                        <td class="px-5 py-4 text-stone-200 font-medium flex items-center gap-2"><i
+                                                data-lucide="check" class="w-3.5 h-3.5 text-green-500"></i>Mendesain
+                                            prompt untuk generate kode</td>
+                                    </tr>
+                                    <tr class="trow border-b border-white/5">
+                                        <td class="px-5 py-4 text-stone-500 flex items-center gap-2"><i data-lucide="x"
+                                                class="w-3.5 h-3.5 text-red-500/50"></i>Debug manual</td>
+                                        <td class="px-5 py-4 text-stone-200 font-medium flex items-center gap-2"><i
+                                                data-lucide="check" class="w-3.5 h-3.5 text-green-500"></i>Validasi
+                                            output AI</td>
+                                    </tr>
+                                    <tr class="trow">
+                                        <td class="px-5 py-4 text-stone-500 flex items-center gap-2"><i data-lucide="x"
+                                                class="w-3.5 h-3.5 text-red-500/50"></i>Fokus ke syntax</td>
+                                        <td class="px-5 py-4 text-stone-200 font-medium flex items-center gap-2"><i
+                                                data-lucide="check" class="w-3.5 h-3.5 text-green-500"></i>Fokus ke
+                                            arsitektur & logika</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="a5 mt-4 grid grid-cols-3 gap-3">
+                            <div class="card p-3 text-center">
+                                <div class="text-[10px] text-stone-500 mb-1.5">Prompting</div>
+                                <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-orange-600 rounded-full" style="width:95%"></div>
+                                </div>
+                                <div class="text-[10px] text-orange-500/60 mt-1">95%</div>
+                            </div>
+                            <div class="card p-3 text-center">
+                                <div class="text-[10px] text-stone-500 mb-1.5">Architecture</div>
+                                <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-blue-500 rounded-full" style="width:88%"></div>
+                                </div>
+                                <div class="text-[10px] text-blue-500/60 mt-1">88%</div>
+                            </div>
+                            <div class="card p-3 text-center">
+                                <div class="text-[10px] text-stone-500 mb-1.5">Validation</div>
+                                <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-green-500 rounded-full" style="width:92%"></div>
+                                </div>
+                                <div class="text-[10px] text-green-500/60 mt-1">92%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 4: ALUR DEV BARU ══ -->
+        <div class="slide dot-grid" data-i="3">
+            <div class="orb orb-blue w-[450px] h-[450px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                style="position:absolute"></div>
+            <div class="geo-ring w-[500px] h-[500px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                style="position:absolute"></div>
+            <div class="geo-ring w-[700px] h-[700px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                style="position:absolute; border-color:rgba(59,130,246,0.04)"></div>
+            <div class="geo-cross" style="position:absolute; top:12%; left:8%"></div>
+            <div class="geo-cross" style="position:absolute; bottom:15%; right:10%"></div>
+
+            <div class="relative z-10 max-w-5xl mx-auto px-8 w-full">
+                <div class="a1 flex items-center gap-3 mb-3">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20 flex items-center justify-center">
+                        <i data-lucide="git-branch" class="w-4 h-4 text-blue-400"></i>
+                    </div>
+                    <span class="text-[11px] font-semibold text-stone-500 tracking-widest uppercase">Workflow
+                        Baru</span>
+                </div>
+                <h2 class="a2 text-3xl md:text-4xl font-bold tracking-tight mb-2">Alur Development Baru</h2>
+                <p class="a3 text-stone-500 text-sm mb-12">Kita hanya perlu mengarahkan AI, bukan coding dari nol.</p>
+
+                <div class="asc flex flex-col md:flex-row items-stretch gap-0">
+                    <div class="flex-1 card card-glow p-7 relative overflow-hidden group">
+                        <div
+                            class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-blue-500/10 to-transparent rounded-bl-full">
+                        </div>
+                        <div class="relative">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
+                                <i data-lucide="file-text" class="w-6 h-6 text-blue-400"></i>
+                            </div>
+                            <div class="text-[10px] font-bold text-blue-400 tracking-widest uppercase mb-1">Langkah 01
+                            </div>
+                            <h3 class="text-xl font-bold text-stone-100 mb-2">PRD</h3>
+                            <p class="text-sm text-stone-400 mb-4">Definisikan kebutuhan produk dengan AI</p>
+                            <div class="badge border-blue-500/20 bg-blue-500/10 text-blue-400 text-[10px]">
+                                <i data-lucide="bot" class="w-3 h-3"></i> AI-Powered
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden md:flex items-center px-1 relative z-10">
+                        <svg width="48" height="24" viewBox="0 0 48 24" fill="none">
+                            <path d="M0 12 H36 M30 6 L38 12 L30 18" stroke="rgba(255,255,255,0.12)" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" class="flow-dash" />
+                        </svg>
+                    </div>
+                    <div class="md:hidden flex justify-center py-1"><svg width="20" height="28" viewBox="0 0 20 28"
+                            fill="none">
+                            <path d="M10 0 V20 M4 14 L10 22 L16 14" stroke="rgba(255,255,255,0.12)" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" class="flow-dash" />
+                        </svg></div>
+                    <div class="flex-1 card p-7 relative overflow-hidden group">
+                        <div
+                            class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-purple-500/10 to-transparent rounded-bl-full">
+                        </div>
+                        <div class="relative">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
+                                <i data-lucide="layout" class="w-6 h-6 text-purple-400"></i>
+                            </div>
+                            <div class="text-[10px] font-bold text-purple-400 tracking-widest uppercase mb-1">Langkah 02
+                            </div>
+                            <h3 class="text-xl font-bold text-stone-100 mb-2">Blueprint UI</h3>
+                            <p class="text-sm text-stone-400 mb-4">Generate mockup & wireframe instan</p>
+                            <div class="badge border-purple-500/20 bg-purple-500/10 text-purple-400 text-[10px]">
+                                <i data-lucide="bot" class="w-3 h-3"></i> AI-Powered
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden md:flex items-center px-1 relative z-10">
+                        <svg width="48" height="24" viewBox="0 0 48 24" fill="none">
+                            <path d="M0 12 H36 M30 6 L38 12 L30 18" stroke="rgba(234,88,12,0.3)" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" class="flow-dash" />
+                        </svg>
+                    </div>
+                    <div class="md:hidden flex justify-center py-1"><svg width="20" height="28" viewBox="0 0 20 28"
+                            fill="none">
+                            <path d="M10 0 V20 M4 14 L10 22 L16 14" stroke="rgba(234,88,12,0.3)" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" class="flow-dash" />
+                        </svg></div>
+                    <div class="flex-1 rounded-2xl p-7 relative overflow-hidden group border border-orange-600/30 bg-gradient-to-br from-orange-600/15 via-stone-900/80 to-stone-900"
+                        style="animation:border-glow 3s ease infinite">
+                        <div
+                            class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-500/20 to-transparent rounded-bl-full">
+                        </div>
+                        <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-orange-600/5 rounded-full blur-xl"></div>
+                        <div class="relative">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-orange-600/20 border border-orange-600/30 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
+                                <i data-lucide="terminal" class="w-6 h-6 text-orange-400"></i>
+                            </div>
+                            <div class="text-[10px] font-bold text-orange-400 tracking-widest uppercase mb-1">Langkah 03
+                            </div>
+                            <h3 class="text-xl font-bold text-stone-100 mb-2">Implementasi IDE</h3>
+                            <p class="text-sm text-stone-400 mb-4">AI Agent generate kode langsung</p>
+                            <div class="badge border-orange-600/30 bg-orange-600/15 text-orange-400 text-[10px]">
+                                <i data-lucide="bot" class="w-3 h-3"></i> AI Agent
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 5: PRD ══ -->
+        <div class="slide dot-grid" data-i="4">
+            <div class="orb orb-blue w-[350px] h-[350px] top-0 left-0" style="position:absolute"></div>
+            <div class="orb orb-green w-[250px] h-[250px] bottom-10 right-20" style="position:absolute"></div>
+            <div class="geo-ring w-[300px] h-[300px] -bottom-20 right-0"
+                style="position:absolute; border-color:rgba(34,197,94,0.05)"></div>
+            <div class="geo-cross" style="position:absolute; top:15%; right:8%"></div>
+
+            <div class="relative z-10 max-w-5xl mx-auto px-8 w-full">
+                <div class="a1 flex items-center gap-3 mb-3">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+                        <span class="text-xs font-bold text-white">1</span>
+                    </div>
+                    <span class="text-[11px] font-semibold text-stone-500 tracking-widest uppercase">PRD dengan
+                        AI</span>
+                </div>
+                <h2 class="a2 text-3xl md:text-4xl font-bold tracking-tight mb-2">
+                    Dari <span class="text-stone-400 line-through">1 Hari</span> → <span class="shimmer-text">5
+                        Menit</span>
+                </h2>
+                <p class="a3 text-stone-500 text-sm mb-10">AI menghasilkan dokumen PRD lengkap dari satu prompt</p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="a3">
+                        <div
+                            class="text-[10px] font-semibold text-stone-500 tracking-widest uppercase mb-3 flex items-center gap-2">
+                            <i data-lucide="message-square" class="w-3.5 h-3.5 text-orange-500"></i> PROMPT INPUT
+                        </div>
+                        <div class="prompt-box p-5">
+                            <p class="text-sm text-stone-300 leading-relaxed italic pl-3">"Buatkan PRD untuk aplikasi
+                                to-do list dengan fitur login, deadline, dan notifikasi harian."</p>
+                        </div>
+                        <div class="a5 mt-5 flex items-center gap-3">
+                            <div class="flex items-center gap-2 text-xs text-stone-500">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 text-blue-400"></i>
+                                <span>Waktu: <span class="text-blue-400 font-medium">~5 menit</span></span>
+                            </div>
+                            <div class="w-px h-4 bg-white/10"></div>
+                            <div class="flex items-center gap-2 text-xs text-stone-500">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-orange-400"></i>
+                                <span>1 prompt → PRD lengkap</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="a4">
+                        <div
+                            class="text-[10px] font-semibold text-stone-500 tracking-widest uppercase mb-3 flex items-center gap-2">
+                            <i data-lucide="file-check" class="w-3.5 h-3.5 text-green-400"></i> HASIL AI
+                        </div>
+                        <div class="space-y-2.5">
+                            <div class="card p-4 flex items-start gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-green-500/15 border border-green-500/20 flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="target" class="w-4 h-4 text-green-400"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-stone-200">Tujuan Produk</div>
+                                    <div class="text-xs text-stone-500">Definisi masalah & target user</div>
+                                </div>
+                            </div>
+                            <div class="card p-4 flex items-start gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="users" class="w-4 h-4 text-blue-400"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-stone-200">User Stories</div>
+                                    <div class="text-xs text-stone-500">As a user, I want to...</div>
+                                </div>
+                            </div>
+                            <div class="card p-4 flex items-start gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="settings" class="w-4 h-4 text-purple-400"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-stone-200">Functional Requirements</div>
+                                    <div class="text-xs text-stone-500">CRUD, auth, notification</div>
+                                </div>
+                            </div>
+                            <div class="card p-4 flex items-start gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-orange-500/15 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="shield" class="w-4 h-4 text-orange-400"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-stone-200">Non-Functional Req.</div>
+                                    <div class="text-xs text-stone-500">Performance, security, scalability</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 6: BLUEPRINT UI ══ -->
+        <div class="slide dot-grid" data-i="5">
+            <div class="orb orb-purple w-[400px] h-[400px] bottom-0 left-1/3" style="position:absolute"></div>
+            <div class="geo-ring w-[350px] h-[350px] -top-16 -right-16"
+                style="position:absolute; border-color:rgba(168,85,247,0.05)"></div>
+            <div class="geo-cross" style="position:absolute; bottom:20%; left:5%"></div>
+
+            <div class="relative z-10 max-w-5xl mx-auto px-8 w-full">
+                <div class="a1 flex items-center gap-3 mb-3">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-600/20">
+                        <span class="text-xs font-bold text-white">2</span>
+                    </div>
+                    <span class="text-[11px] font-semibold text-stone-500 tracking-widest uppercase">Blueprint UI dengan
+                        AI</span>
+                </div>
+                <h2 class="a2 text-3xl md:text-4xl font-bold tracking-tight mb-8">
+                    Dari Prompt ke <span class="text-purple-400">Mockup</span>
+                </h2>
+                <div class="grid md:grid-cols-5 gap-6 items-start">
+                    <div class="md:col-span-2 space-y-5 a3">
+                        <div>
+                            <div class="text-[10px] font-semibold text-stone-500 tracking-widest uppercase mb-3">Tools
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="badge border-purple-500/25 bg-purple-500/10 text-purple-300"><i
+                                        data-lucide="sparkles" class="w-3 h-3"></i>v0.dev</span>
+                                <span class="badge border-purple-500/25 bg-purple-500/10 text-purple-300">Galileo
+                                    AI</span>
+                                <span class="badge border-purple-500/25 bg-purple-500/10 text-purple-300">GPT-4 +
+                                    DALL-E</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div
+                                class="text-[10px] font-semibold text-stone-500 tracking-widest uppercase mb-3 flex items-center gap-2">
+                                <i data-lucide="message-square" class="w-3.5 h-3.5 text-orange-500"></i> PROMPT
+                            </div>
+                            <div class="prompt-box p-4">
+                                <p class="text-sm text-stone-300 leading-relaxed italic pl-3">"Wireframe halaman login
+                                    dengan email, password, tombol login, dan link lupa password."</p>
+                            </div>
+                        </div>
+                        <div class="card p-4">
+                            <div class="flex items-center gap-3 text-xs">
+                                <div class="flex items-center gap-1.5 text-stone-400"><i data-lucide="type"
+                                        class="w-3.5 h-3.5"></i> Text</div>
+                                <i data-lucide="arrow-right" class="w-3 h-3 text-stone-600"></i>
+                                <div class="flex items-center gap-1.5 text-purple-400"><i data-lucide="bot"
+                                        class="w-3.5 h-3.5"></i> AI</div>
+                                <i data-lucide="arrow-right" class="w-3 h-3 text-stone-600"></i>
+                                <div class="flex items-center gap-1.5 text-green-400"><i data-lucide="monitor"
+                                        class="w-3.5 h-3.5"></i> UI</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:col-span-3 a4">
+                        <div
+                            class="text-[10px] font-semibold text-stone-500 tracking-widest uppercase mb-3 flex items-center gap-2">
+                            <i data-lucide="monitor" class="w-3.5 h-3.5 text-purple-400"></i> HASIL UI PREVIEW
+                        </div>
+                        <div class="rounded-2xl overflow-hidden border border-white/8 shadow-2xl shadow-black/40">
+                            <div class="flex items-center gap-2 px-4 py-2.5 bg-stone-800/80 border-b border-white/5">
+                                <div class="flex gap-1.5">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-green-500/60"></div>
+                                </div>
+                                <div class="flex-1 mx-4">
+                                    <div
+                                        class="bg-white/5 rounded-md px-3 py-1 text-[10px] text-stone-500 text-center border border-white/5">
+                                        localhost:3000/login</div>
+                                </div>
+                            </div>
+                            <div class="bg-stone-800/40 p-8 md:p-10">
+                                <div class="max-w-xs mx-auto">
+                                    <div class="text-center mb-6">
+                                        <div
+                                            class="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 mx-auto mb-3 shadow-lg shadow-purple-600/20">
+                                        </div>
+                                        <div class="h-4 bg-white/8 rounded w-24 mx-auto"></div>
+                                        <div class="h-3 bg-white/5 rounded w-32 mx-auto mt-2"></div>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <div class="h-3 bg-white/8 rounded w-12 mb-1.5"></div>
+                                            <div class="h-10 bg-white/5 rounded-lg border border-white/8"></div>
+                                        </div>
+                                        <div>
+                                            <div class="h-3 bg-white/8 rounded w-16 mb-1.5"></div>
+                                            <div class="h-10 bg-white/5 rounded-lg border border-white/8"></div>
+                                        </div>
+                                        <div
+                                            class="h-10 bg-gradient-to-r from-purple-600 to-purple-500 rounded-lg mt-4 shadow-lg shadow-purple-600/20">
+                                        </div>
+                                        <div class="h-3 bg-white/5 rounded w-28 mx-auto mt-3"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 7: IMPLEMENTASI IDE ══ -->
+        <div class="slide dot-grid" data-i="6">
+            <div class="orb orb-orange w-[400px] h-[400px] top-0 right-0" style="position:absolute"></div>
+            <div class="orb orb-green w-[200px] h-[200px] bottom-20 left-10" style="position:absolute"></div>
+            <div class="geo-ring w-[280px] h-[280px] -bottom-10 -left-10" style="position:absolute"></div>
+            <div class="geo-cross" style="position:absolute; top:18%; left:5%"></div>
+            <div class="geo-cross" style="position:absolute; bottom:12%; right:8%"></div>
+
+            <div class="relative z-10 max-w-5xl mx-auto px-8 w-full">
+                <div class="a1 flex items-center gap-3 mb-3">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/20">
+                        <span class="text-xs font-bold text-white">3</span>
+                    </div>
+                    <span class="text-[11px] font-semibold text-stone-500 tracking-widest uppercase">Implementasi ke
+                        IDE</span>
+                </div>
+                <h2 class="a2 text-3xl md:text-4xl font-bold tracking-tight mb-8">
+                    AI Agent <span class="shimmer-text">Generate Kode</span>
+                </h2>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="a3 space-y-6">
+                        <div>
+                            <div class="text-[10px] font-semibold text-stone-500 tracking-widest uppercase mb-3">IDE AI
+                                Agent</div>
+                            <div class="flex flex-wrap gap-2">
+                                <span
+                                    class="badge border-orange-600/30 bg-orange-600/15 text-orange-300 shadow-lg shadow-orange-600/10"><i
+                                        data-lucide="star" class="w-3 h-3"></i>Cursor</span>
+                                <span class="badge border-white/10 bg-white/5 text-stone-400">Continue.dev</span>
+                                <span class="badge border-white/10 bg-white/5 text-stone-400">Copilot Workspace</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-semibold text-stone-500 tracking-widest uppercase mb-4">Proses
+                            </div>
+                            <div class="space-y-4">
+                                <div class="card p-4 flex items-center gap-4">
+                                    <div
+                                        class="w-9 h-9 rounded-full bg-gradient-to-br from-stone-600 to-stone-700 flex items-center justify-center flex-shrink-0 border border-white/10">
+                                        <span class="text-[11px] font-bold text-white">1</span>
+                                    </div>
+                                    <span class="text-sm text-stone-300">Copy PRD + UI blueprint ke AI Agent</span>
+                                </div>
+                                <div class="card p-4 flex items-center gap-4">
+                                    <div
+                                        class="w-9 h-9 rounded-full bg-gradient-to-br from-stone-600 to-stone-700 flex items-center justify-center flex-shrink-0 border border-white/10">
+                                        <span class="text-[11px] font-bold text-white">2</span>
+                                    </div>
+                                    <span class="text-sm text-stone-300">AI generate struktur, backend, frontend,
+                                        test</span>
+                                </div>
+                                <div class="card p-4 flex items-center gap-4 border-orange-600/20"
+                                    style="background:rgba(234,88,12,0.05)">
+                                    <div
+                                        class="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-600/20">
+                                        <i data-lucide="play" class="w-3.5 h-3.5 text-white"></i>
+                                    </div>
+                                    <span class="text-sm text-orange-300 font-medium">Review & run!</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="a4">
+                        <div class="code-bg rounded-xl overflow-hidden shadow-2xl shadow-black/40">
+                            <div class="flex items-center gap-2 px-4 py-2.5 bg-stone-800/60 border-b border-white/5">
+                                <div class="flex gap-1.5">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
+                                </div>
+                                <div class="flex items-center gap-1.5 ml-3">
+                                    <div class="w-2 h-2 rounded-full bg-orange-500"
+                                        style="animation:pulseGlow 1.5s infinite"></div>
+                                    <span class="text-[10px] text-orange-400 font-medium">AI Agent –
+                                        Generating...</span>
+                                </div>
+                            </div>
+                            <div class="p-5 text-[11px] leading-relaxed">
+                                <div><span class="text-stone-600">📁</span> <span class="text-blue-400">src/</span>
+                                </div>
+                                <div class="ml-4"><span class="text-stone-600">📁</span> <span
+                                        class="text-blue-400">components/</span></div>
+                                <div class="ml-8"><span class="text-green-400">📄</span> <span
+                                        class="text-stone-300">LoginForm.tsx</span></div>
+                                <div class="ml-8"><span class="text-green-400">📄</span> <span
+                                        class="text-stone-300">TodoList.tsx</span></div>
+                                <div class="ml-8"><span class="text-green-400">📄</span> <span
+                                        class="text-stone-300">Notification.tsx</span></div>
+                                <div class="ml-4"><span class="text-stone-600">📁</span> <span
+                                        class="text-blue-400">api/</span></div>
+                                <div class="ml-8"><span class="text-green-400">📄</span> <span
+                                        class="text-stone-300">auth.ts</span></div>
+                                <div class="ml-8"><span class="text-green-400">📄</span> <span
+                                        class="text-stone-300">todos.ts</span></div>
+                                <div class="ml-4"><span class="text-stone-600">📁</span> <span
+                                        class="text-blue-400">__tests__/</span></div>
+                                <div class="ml-8"><span class="text-green-400">📄</span> <span
+                                        class="text-stone-300">auth.test.ts</span></div>
+                                <div class="ml-8"><span class="text-green-400">📄</span> <span
+                                        class="text-stone-300">todos.test.ts</span></div>
+                                <div class="ml-4"><span class="text-green-400">📄</span> <span
+                                        class="text-stone-300">App.tsx</span></div>
+                                <div class="mt-3 pt-3 border-t border-white/5">
+                                    <div><span class="text-green-500">✓</span> <span class="text-stone-500">12 files
+                                            generated</span></div>
+                                    <div><span class="text-green-500">✓</span> <span class="text-stone-500">Unit tests
+                                            included</span></div>
+                                    <div><span class="text-green-500">✓</span> <span class="text-stone-500">TypeScript
+                                            strict mode</span></div>
+                                    <div class="mt-1"><span class="text-orange-400">▶</span> <span
+                                            class="text-stone-400">Ready to run</span> <span class="text-stone-600">npm
+                                            run dev</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 8: CONTOH NYATA ══ -->
+        <div class="slide dot-grid" data-i="7">
+            <div class="orb orb-green w-[350px] h-[350px] top-10 left-10" style="position:absolute"></div>
+            <div class="orb orb-orange w-[300px] h-[300px] bottom-10 right-10" style="position:absolute"></div>
+            <div class="geo-ring w-[400px] h-[400px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                style="position:absolute; border-color:rgba(34,197,94,0.04)"></div>
+            <div class="geo-cross" style="position:absolute; top:10%; right:10%"></div>
+            <div class="geo-cross" style="position:absolute; bottom:8%; left:6%"></div>
+
+            <div class="relative z-10 max-w-5xl mx-auto px-8 w-full">
+                <div class="a1 flex items-center gap-3 mb-3">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/20 flex items-center justify-center">
+                        <i data-lucide="rocket" class="w-4 h-4 text-green-400"></i>
+                    </div>
+                    <span class="text-[11px] font-semibold text-stone-500 tracking-widest uppercase">Studi Kasus</span>
+                </div>
+                <h2 class="a2 text-3xl md:text-4xl font-bold tracking-tight mb-8">
+                    Aplikasi <span class="text-green-400">Kalkulator BMI</span>
+                </h2>
+                <div class="a3 grid grid-cols-3 gap-4 mb-6">
+                    <div class="card card-glow p-5 text-center">
+                        <div
+                            class="w-11 h-11 rounded-2xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="file-text" class="w-5 h-5 text-blue-400"></i>
+                        </div>
+                        <div class="text-[10px] font-bold text-blue-400 tracking-widest uppercase mb-1">PRD</div>
+                        <p class="text-xs text-stone-500 mb-3">AI generate 3 menit</p>
+                        <div
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-[10px] font-semibold text-green-400">
+                            <i data-lucide="check-circle" class="w-3 h-3"></i> Done
+                        </div>
+                    </div>
+                    <div class="card p-5 text-center">
+                        <div
+                            class="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="layout" class="w-5 h-5 text-purple-400"></i>
+                        </div>
+                        <div class="text-[10px] font-bold text-purple-400 tracking-widest uppercase mb-1">Blueprint UI
+                        </div>
+                        <p class="text-xs text-stone-500 mb-3">v0.dev, 2 menit</p>
+                        <div
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-[10px] font-semibold text-green-400">
+                            <i data-lucide="check-circle" class="w-3 h-3"></i> Done
+                        </div>
+                    </div>
+                    <div
+                        class="rounded-2xl p-5 text-center border border-orange-600/25 bg-gradient-to-br from-orange-600/10 to-stone-900/60">
+                        <div
+                            class="w-11 h-11 rounded-2xl bg-orange-600/20 border border-orange-600/30 flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="terminal" class="w-5 h-5 text-orange-400"></i>
+                        </div>
+                        <div class="text-[10px] font-bold text-orange-400 tracking-widest uppercase mb-1">Implementasi
+                        </div>
+                        <p class="text-xs text-stone-500 mb-3">Cursor, 5 menit</p>
+                        <div
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-600/15 border border-orange-600/30 text-[10px] font-semibold text-orange-400">
+                            <i data-lucide="check-circle" class="w-3 h-3"></i> Running ✓
+                        </div>
+                    </div>
+                </div>
+                <div class="a4 rounded-2xl overflow-hidden border border-white/8 shadow-2xl shadow-black/40">
+                    <div class="flex items-center gap-2 px-4 py-2.5 bg-stone-800/80 border-b border-white/5">
+                        <div class="flex gap-1.5">
+                            <div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-green-500/60"></div>
+                        </div>
+                        <div class="flex-1 mx-4">
+                            <div
+                                class="bg-white/5 rounded-md px-3 py-1 text-[10px] text-stone-500 text-center border border-white/5">
+                                localhost:3000</div>
+                        </div>
+                        <div
+                            class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
+                            <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div><span
+                                class="text-[9px] text-green-400 font-medium">Live</span>
+                        </div>
+                    </div>
+                    <div class="bg-stone-800/40 p-6 md:p-8">
+                        <div class="max-w-sm mx-auto text-center">
+                            <div class="text-lg font-bold text-stone-100 mb-0.5">Kalkulator BMI</div>
+                            <div class="text-xs text-stone-500 mb-5">Masukkan data untuk menghitung BMI Anda</div>
+                            <div class="space-y-3 text-left">
+                                <div>
+                                    <div class="text-xs font-medium text-stone-400 mb-1">Berat (kg)</div>
+                                    <div
+                                        class="h-10 bg-white/5 rounded-lg border border-white/8 flex items-center px-3">
+                                        <span class="text-sm text-stone-200">70</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium text-stone-400 mb-1">Tinggi (cm)</div>
+                                    <div
+                                        class="h-10 bg-white/5 rounded-lg border border-white/8 flex items-center px-3">
+                                        <span class="text-sm text-stone-200">175</span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="h-10 bg-gradient-to-r from-green-600 to-green-500 rounded-lg mt-3 shadow-lg shadow-green-600/20 flex items-center justify-center">
+                                    <span class="text-sm font-semibold text-white">Hitung BMI</span>
+                                </div>
+                            </div>
+                            <div class="mt-5 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                                <div class="text-2xl font-extrabold text-green-400">22.9</div>
+                                <div class="text-xs text-green-400/80 font-medium mt-0.5">Normal Weight ✓</div>
+                                <div class="mt-2 w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full"
+                                        style="width:45%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="a5 mt-4 flex items-center justify-center gap-2 text-xs text-stone-500">
+                    <i data-lucide="timer" class="w-3.5 h-3.5 text-green-400"></i>
+                    Total waktu: <span class="text-green-400 font-semibold">~10 menit</span> dari PRD sampai running app
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 9: IMPLIKASI ══ -->
+        <div class="slide dot-grid" data-i="8">
+            <div class="orb orb-orange w-[350px] h-[350px] top-1/2 left-0 -translate-y-1/2" style="position:absolute">
+            </div>
+            <div class="orb orb-blue w-[250px] h-[250px] top-10 right-20" style="position:absolute"></div>
+            <div class="geo-ring w-[300px] h-[300px] -bottom-16 right-0" style="position:absolute"></div>
+            <div class="geo-cross" style="position:absolute; top:12%; left:10%"></div>
+            <div class="geo-cross" style="position:absolute; bottom:25%; right:6%"></div>
+
+            <div class="relative z-10 max-w-5xl mx-auto px-8 w-full">
+                <div class="a1 flex items-center gap-3 mb-3">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-600/20 flex items-center justify-center">
+                        <i data-lucide="scale" class="w-4 h-4 text-orange-400"></i>
+                    </div>
+                    <span class="text-[11px] font-semibold text-stone-500 tracking-widest uppercase">Implikasi</span>
+                </div>
+                <h2 class="a2 text-3xl md:text-4xl font-bold tracking-tight mb-8">
+                    Implikasi untuk <span class="text-orange-500">Developer</span>
+                </h2>
+                <div class="a3 card overflow-hidden mb-8">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-white/5 bg-white/2">
+                                <th
+                                    class="text-left px-6 py-4 text-[10px] font-semibold text-stone-500 tracking-wider uppercase w-1/2">
+                                    <span class="flex items-center gap-2"><i data-lucide="history"
+                                            class="w-3.5 h-3.5 text-stone-500"></i> Dulu</span>
+                                </th>
+                                <th
+                                    class="text-left px-6 py-4 text-[10px] font-semibold text-orange-500 tracking-wider uppercase w-1/2">
+                                    <span class="flex items-center gap-2"><i data-lucide="arrow-right"
+                                            class="w-3 h-3"></i> Sekarang</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="trow border-b border-white/5">
+                                <td class="px-6 py-4 text-stone-500 flex items-center gap-2.5">
+                                    <div class="w-6 h-6 rounded bg-red-500/10 flex items-center justify-center"><i
+                                            data-lucide="code" class="w-3 h-3 text-red-400/60"></i></div>Menulis kode
+                                    baris per baris
+                                </td>
+                                <td class="px-6 py-4 text-stone-200 font-medium flex items-center gap-2.5">
+                                    <div class="w-6 h-6 rounded bg-green-500/10 flex items-center justify-center"><i
+                                            data-lucide="eye" class="w-3 h-3 text-green-400"></i></div>Memverifikasi &
+                                    mengarahkan AI
+                                </td>
+                            </tr>
+                            <tr class="trow border-b border-white/5">
+                                <td class="px-6 py-4 text-stone-500 flex items-center gap-2.5">
+                                    <div class="w-6 h-6 rounded bg-red-500/10 flex items-center justify-center"><i
+                                            data-lucide="bug" class="w-3 h-3 text-red-400/60"></i></div>Junior = bug
+                                    fixer
+                                </td>
+                                <td class="px-6 py-4 text-stone-200 font-medium flex items-center gap-2.5">
+                                    <div class="w-6 h-6 rounded bg-green-500/10 flex items-center justify-center"><i
+                                            data-lucide="message-square" class="w-3 h-3 text-green-400"></i></div>Junior
+                                    = prompt engineer + tester
+                                </td>
+                            </tr>
+                            <tr class="trow">
+                                <td class="px-6 py-4 text-stone-500 flex items-center gap-2.5">
+                                    <div class="w-6 h-6 rounded bg-red-500/10 flex items-center justify-center"><i
+                                            data-lucide="layers" class="w-3 h-3 text-red-400/60"></i></div>Senior =
+                                    arsitek
+                                </td>
+                                <td class="px-6 py-4 text-stone-200 font-medium flex items-center gap-2.5">
+                                    <div class="w-6 h-6 rounded bg-green-500/10 flex items-center justify-center"><i
+                                            data-lucide="scan" class="w-3 h-3 text-green-400"></i></div>Senior =
+                                    evaluator output AI
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div
+                    class="a4 rounded-2xl p-6 md:p-8 border border-orange-600/20 bg-gradient-to-r from-orange-600/10 via-orange-600/5 to-transparent relative overflow-hidden">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-orange-600/10 rounded-full blur-2xl"></div>
+                    <div class="relative flex items-start gap-4">
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-600/25">
+                            <i data-lucide="target" class="w-7 h-7 text-white"></i>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-orange-500 tracking-widest uppercase mb-2">Skill Baru
+                                Terpenting</div>
+                            <p class="text-stone-200 font-semibold text-lg leading-relaxed">Mendefinisikan masalah
+                                dengan <span class="shimmer-text">presisi</span></p>
+                            <p class="text-stone-400 text-sm mt-1">+ memvalidasi hasil AI dengan <span
+                                    class="text-orange-400 font-medium">kritikal & sistematis</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 10: PENUTUP ══ -->
+        <div class="slide dot-grid" data-i="9">
+            <div class="orb orb-orange w-[500px] h-[500px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                style="position:absolute"></div>
+            <div class="orb orb-purple w-[300px] h-[300px] top-10 left-10" style="position:absolute"></div>
+            <div class="orb orb-blue w-[250px] h-[250px] bottom-10 right-10" style="position:absolute"></div>
+            <div class="geo-ring w-[500px] h-[500px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                style="position:absolute; border-color:rgba(234,88,12,0.06)"></div>
+            <div class="geo-ring w-[700px] h-[700px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                style="position:absolute; border-color:rgba(234,88,12,0.03)"></div>
+            <div style="position:absolute; top:15%; left:10%; animation:float 4.5s ease-in-out infinite;" class="a4">
+                <div
+                    class="w-10 h-10 rounded-xl border border-orange-600/15 bg-orange-600/5 flex items-center justify-center">
+                    <i data-lucide="terminal" class="w-4 h-4 text-orange-600/30"></i>
+                </div>
+            </div>
+            <div style="position:absolute; bottom:18%; right:12%; animation:float 5.5s ease-in-out infinite 1s;"
+                class="a5">
+                <div
+                    class="w-10 h-10 rounded-xl border border-purple-500/15 bg-purple-500/5 flex items-center justify-center">
+                    <i data-lucide="brain" class="w-4 h-4 text-purple-500/30"></i>
+                </div>
+            </div>
+            <div style="position:absolute; top:25%; right:15%; animation:float 3.8s ease-in-out infinite 0.5s;"
+                class="a6">
+                <div
+                    class="w-8 h-8 rounded-lg border border-blue-500/15 bg-blue-500/5 flex items-center justify-center">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-500/30"></i>
+                </div>
+            </div>
+            <div style="position:absolute; bottom:25%; left:15%; animation:float 4s ease-in-out infinite 1.5s;"
+                class="a6">
+                <div
+                    class="w-8 h-8 rounded-lg border border-green-500/15 bg-green-500/5 flex items-center justify-center">
+                    <i data-lucide="zap" class="w-3.5 h-3.5 text-green-500/30"></i>
+                </div>
+            </div>
+
+            <div class="relative z-10 max-w-4xl mx-auto px-8 text-center">
+                <div class="a1 badge border-orange-600/20 bg-orange-600/10 text-orange-400 mb-8">
+                    <i data-lucide="flag" class="w-3.5 h-3.5"></i> PENUTUP
+                </div>
+                <h2 class="a2 text-3xl md:text-5xl font-bold tracking-tight leading-tight mb-4">
+                    Jangan jadi coder.
+                </h2>
+                <h2 class="a3 text-3xl md:text-5xl font-bold tracking-tight leading-tight mb-10">
+                    Jadilah <span class="shimmer-text">problem definer</span>.
+                </h2>
+                <div class="a4 max-w-xl mx-auto mb-10">
+                    <div class="card p-6 text-left border-orange-600/15" style="background:rgba(234,88,12,0.03)">
+                        <div class="flex items-start gap-3">
+                            <div
+                                class="w-8 h-8 rounded-lg bg-orange-600/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i data-lucide="quote" class="w-4 h-4 text-orange-500"></i>
+                            </div>
+                            <p class="text-stone-300 leading-relaxed text-sm">
+                                AI Agent di IDE menghilangkan pekerjaan mekanis, bukan menggantikan developer. Yang
+                                bertahan adalah yang naik level: dari <span
+                                    class="text-stone-100 font-medium">coder</span> menjadi <span
+                                    class="text-orange-400 font-semibold">problem definer & system thinker</span>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-16 h-px bg-gradient-to-r from-transparent via-orange-600/30 to-transparent mx-auto mb-6">
+                </div>
+                <div class="a6 flex items-center justify-center gap-5 text-stone-500 text-sm">
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center text-[8px] font-bold text-white">
+                            MN</div>
+                        <span>M. Alpiannor Najimi</span>
+                    </div>
+                    <span class="w-1 h-1 rounded-full bg-stone-700"></span>
+                    <span class="text-orange-500 font-medium">Pertanyaan?</span>
+                    <span class="w-1 h-1 rounded-full bg-stone-700"></span>
+                    <div class="flex items-center gap-1.5"><i data-lucide="mail"
+                            class="w-3.5 h-3.5"></i><span>najimi.alpian@gmail.com</span></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Key Hint -->
+    <div id="kh"
+        class="nav-ui fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-stone-800/90 backdrop-blur-md text-stone-300 text-[10px] font-medium tracking-wider px-5 py-2.5 rounded-full shadow-2xl shadow-black/40 border border-white/5 opacity-0 transition-opacity duration-500 pointer-events-none flex items-center gap-4">
+        <span class="flex items-center gap-1"><kbd
+                class="px-1.5 py-0.5 bg-white/10 rounded text-[9px] border border-white/10">←</kbd><kbd
+                class="px-1.5 py-0.5 bg-white/10 rounded text-[9px] border border-white/10">→</kbd> Navigasi</span>
+        <span class="w-px h-3 bg-white/10"></span>
+        <span class="flex items-center gap-1"><kbd
+                class="px-1.5 py-0.5 bg-white/10 rounded text-[9px] border border-white/10">F</kbd> Fullscreen</span>
+        <span class="w-px h-3 bg-white/10"></span>
+        <span class="flex items-center gap-1"><kbd
+                class="px-1.5 py-0.5 bg-white/10 rounded text-[9px] border border-white/10">P</kbd> Print</span>
+        <span class="w-px h-3 bg-white/10"></span>
+        <span class="flex items-center gap-1"><i data-lucide="mic" class="w-3 h-3 text-blue-400"></i> Voice ("Lanjut")</span>
+    </div>
+
+    <!-- Annyang for Voice Commands -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+
+    <script>
+        lucide.createIcons();
+        let cur = 0, total = 10, animating = false;
+
+        function updateSlide(ni, dir = 'next') {
+            if (animating || ni === cur || ni < 0 || ni >= total) return;
+            animating = true;
+            const slides = document.querySelectorAll('.slide');
+            slides[cur].classList.remove('active');
+            if (dir === 'next') slides[cur].classList.add('exit-up');
+            setTimeout(() => {
+                slides[cur].classList.remove('exit-up');
+                slides[ni].classList.add('active');
+                cur = ni;
+                document.getElementById('prog').style.width = ((cur + 1) / total * 100) + '%';
+                document.getElementById('curNum').textContent = String(cur + 1).padStart(2, '0');
+                document.querySelectorAll('.ndot').forEach((d, i) => d.classList.toggle('active', i === cur));
+                animating = false;
+            }, 200);
+        }
+        function next() { updateSlide(cur + 1, 'next'); }
+        function prev() { updateSlide(cur - 1, 'prev'); }
+        function goTo(i) { updateSlide(i, i > cur ? 'next' : 'prev'); }
+
+        document.addEventListener('keydown', e => {
+            switch (e.key) {
+                case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); next(); break;
+                case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prev(); break;
+                case 'Home': e.preventDefault(); goTo(0); break;
+                case 'End': e.preventDefault(); goTo(total - 1); break;
+                case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); } break;
+                case 'p': case 'P': if (!e.ctrlKey && !e.metaKey) window.print(); break;
+            }
+        });
+
+        let tx = 0, ty = 0;
+        document.addEventListener('touchstart', e => { tx = e.changedTouches[0].screenX; ty = e.changedTouches[0].screenY; }, { passive: true });
+        document.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].screenX - tx, dy = e.changedTouches[0].screenY - ty;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) { dx < 0 ? next() : prev(); }
+        }, { passive: true });
+
+        setTimeout(() => {
+            const h = document.getElementById('kh');
+            h.style.opacity = '1';
+            setTimeout(() => { h.style.opacity = '0'; }, 4500);
+        }, 1200);
+
+        // Voice Control with Annyang
+        if (typeof annyang !== 'undefined') {
+            // Set language to Indonesian for better recognition of local terms
+            annyang.setLanguage('id-ID');
+            
+            const commands = {
+                'lanjut': () => next(),
+                'selanjutnya': () => next(),
+                'berikutnya': () => next(),
+                'next': () => next(),
+                'kembali': () => prev(),
+                'sebelumnya': () => prev(),
+                'mundur': () => prev(),
+                'previous': () => prev()
+            };
+            
+            annyang.addCommands(commands);
+            annyang.start({ autoRestart: true, continuous: false });
+        }
+    </script>
+</body>
+
+</html>
